@@ -1,17 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
-using APIComments.Context;
+
 using APIComments.Models;
+using APIComments.Repository;
 
 namespace APIComments.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class PostsController : ControllerBase
     {
-        private readonly APICommentsContext _context;
-         public PostsController(APICommentsContext context)
+        private readonly IUnitOfWork _context;
+         public PostsController(IUnitOfWork context)
         {
             _context = context;
         }
@@ -20,7 +20,7 @@ namespace APIComments.Controllers
         public ActionResult<IEnumerable<Post>> GetPostsComentarios()
         {
 
-            return _context.Posts.Include(c => c.Comentarios).AsNoTracking().ToList();
+            return _context.PostRepository.GetPostsComentarios().ToList();
             
         }
 
@@ -28,66 +28,64 @@ namespace APIComments.Controllers
         [HttpGet]
         public ActionResult<IEnumerable<Post>> Get()
         {
-            var posts = _context.Posts.AsNoTracking().ToList();
-            if (posts is null)
-            {
-                return NotFound("Comentários não encontrados");
-            }
-            return posts;
+            return _context.PostRepository.Get().ToList();
         }
 
         [HttpGet("{id:int}", Name = "ObterPost")]
         public ActionResult<Post> Get(int id)
         {
-            var post = _context.Posts.FirstOrDefault(c => c.PostId == id );
-            if (post is null)
+            var post = _context.PostRepository.GetById(c => c.PostId == id );
+            if (post == null)
             {
-                return NotFound("Post não encontrado");
+                return NotFound();
             }
             return post;
         }
 
         [HttpPost]
-        public ActionResult Post(Post post)
+        public ActionResult Post([FromBody] Post post)
         {
-            if (post is null)
-                return BadRequest();
+            
 
-            _context.Posts.Add(post);
-            _context.SaveChanges();
+            _context.PostRepository.Add(post);
+            _context.Commit();
 
             return new CreatedAtRouteResult("ObterPost",
                 new { id = post.PostId }, post);
         }
 
-        [HttpPut("{id:int}")]
-        public ActionResult Put(int id, Post post)
-        {
-            if (id != post.PostId)
+
+        
+            [HttpPut("{id}")]
+            public ActionResult Put(int id, [FromBody] Post post)
             {
-                return BadRequest();
+                if (id != post.PostId)
+                {
+                    return BadRequest();
+                }
+
+                _context.PostRepository.Update(post);
+                _context.Commit();
+                return Ok();
             }
+        
 
-            _context.Entry(post).State = EntityState.Modified;
-            _context.SaveChanges();
-
-            return Ok(post);
-        }
+    
 
         [HttpDelete("{id:int}")]
-        public ActionResult Delete(int id)
+        public ActionResult<Post> Delete(int id)
         {
-            var post = _context.Comentarios.FirstOrDefault(c => c.Id == id);
+            var post = _context.PostRepository.GetById(c => c.PostId == id);
 
             if (post is null)
             {
                 return NotFound("Post não encontrado");
             }
 
-            _context.Comentarios.Remove(post);
-            _context.SaveChanges();
+            _context.PostRepository.Delete(post);
+            _context.Commit();
 
-            return Ok(post);
+            return post;
         }
     }
 }

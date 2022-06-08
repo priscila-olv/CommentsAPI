@@ -1,5 +1,6 @@
 using APIComments.Context;
 using Microsoft.EntityFrameworkCore;
+using APIComments.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,10 +14,13 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
 string ConnectionDB = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<APICommentsContext>(options =>
                     options.UseMySql(ConnectionDB,
                     ServerVersion.AutoDetect(ConnectionDB)));
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 var app = builder.Build();
 

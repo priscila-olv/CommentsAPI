@@ -3,25 +3,31 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using APIComments.Context;
 using APIComments.Models;
-
+using APIComments.Repository;
 
 namespace APIComments.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class ComentariosController : ControllerBase
     {
-        private readonly APICommentsContext _context;
+        private readonly IUnitOfWork _uof;
 
-        public ComentariosController(APICommentsContext context)
+        public ComentariosController(IUnitOfWork context)
         {
-            _context = context;
+            _uof = context;
+        }
+
+        [HttpGet("nome")]
+        public ActionResult<IEnumerable<Comentario>> GetByName()
+        {
+            return _uof.ComentarioRepository.GetByName().ToList();
         }
 
         [HttpGet]
         public ActionResult<IEnumerable<Comentario>> Get()
         {
-            var comentarios = _context.Comentarios.AsNoTracking().ToList();
+            var comentarios =  _uof.ComentarioRepository.Get().ToList();
             if (comentarios is null)
             {
                 return NotFound("Comentários não encontrados");
@@ -32,8 +38,8 @@ namespace APIComments.Controllers
         [HttpGet("{id:int}", Name = "ObterComentario")]
         public ActionResult<Comentario> Get(int id)
         {
-            var comentario = _context.Comentarios.FirstOrDefault(c => c.Id == id );
-            if (comentario is null)
+            var comentario = _uof.ComentarioRepository.GetById(c => c.Id == id);
+            if (comentario == null)
             {
                 return NotFound("Comentário não encontrado");
             }
@@ -46,8 +52,8 @@ namespace APIComments.Controllers
             if (comentario is null)
                 return BadRequest();
 
-            _context.Comentarios.Add(comentario);
-            _context.SaveChanges();
+            _uof.ComentarioRepository.Add(comentario);
+            _uof.Commit();
 
             return new CreatedAtRouteResult("ObterComentario",
                 new { id = comentario.Id }, comentario);
@@ -61,26 +67,26 @@ namespace APIComments.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(comentario).State = EntityState.Modified;
-            _context.SaveChanges();
+            _uof.ComentarioRepository.Update(comentario);
+            _uof.Commit();
 
-            return Ok(comentario);
+            return Ok();
         }
 
         [HttpDelete("{id:int}")]
         public ActionResult Delete(int id)
         {
-            var comentario = _context.Comentarios.FirstOrDefault(c => c.Id == id);
+            var comentario = _uof.ComentarioRepository.GetById(c => c.Id == id);
 
             if (comentario is null)
             {
                 return NotFound("Comentário não encontrado");
             }
 
-            _context.Comentarios.Remove(comentario);
-            _context.SaveChanges();
+            _uof.ComentarioRepository.Delete(comentario);
+            _uof.Commit();
 
-            return Ok(comentario);
+            return Ok();
         }
     }
 }
